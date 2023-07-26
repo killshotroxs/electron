@@ -185,7 +185,8 @@ void WebFrameMain::Send(v8::Isolate* isolate,
     return;
 
   GetRendererApi()->Message(internal, channel, std::move(message),
-                            0 /* sender_id */);
+                            0 /* sender_id */,
+                            false /* sender_is_main_frame */);
 }
 
 const mojo::Remote<mojom::ElectronRenderer>& WebFrameMain::GetRendererApi() {
@@ -409,7 +410,7 @@ void WebFrameMain::FillObjectTemplate(v8::Isolate* isolate,
 }
 
 const char* WebFrameMain::GetTypeName() {
-  return "WebFrameMain";
+  return GetClassName();
 }
 
 }  // namespace electron::api

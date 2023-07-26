@@ -394,8 +394,10 @@ function parseWebP (riff) {
   const height = tmp & 0x3FFF;
   const verticalScale = tmp >> 14;
   return {
-    width: width,
-    height: height,
+    width,
+    height,
+    horizontalScale,
+    verticalScale,
     data: VP8,
     riff: riff
   };
@@ -475,7 +477,7 @@ WhammyVideo.prototype.add = function (frame, duration) {
     // quickly store image data so we don't block cpu. encode in compile method.
     frame = frame.getContext('2d').getImageData(0, 0, frame.width, frame.height);
   } else if (typeof frame !== 'string') {
-    throw new Error('frame must be a a HTMLCanvasElement, a CanvasRenderingContext2D or a DataURI formatted string');
+    throw new TypeError('frame must be a a HTMLCanvasElement, a CanvasRenderingContext2D or a DataURI formatted string');
   }
   if (typeof frame === 'string' && !(/^data:image\/webp;base64,/ig).test(frame)) {
     throw new Error('Input must be formatted properly as a base64 encoded DataURI of type image/webp');

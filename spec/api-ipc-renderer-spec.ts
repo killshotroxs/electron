@@ -1,15 +1,22 @@
 import { expect } from 'chai';
-import * as path from 'path';
+import * as path from 'node:path';
 import { ipcMain, BrowserWindow, WebContents, WebPreferences, webContents } from 'electron/main';
 import { closeWindow } from './lib/window-helpers';
-import { once } from 'events';
+import { once } from 'node:events';
 
 describe('ipcRenderer module', () => {
   const fixtures = path.join(__dirname, 'fixtures');
 
   let w: BrowserWindow;
   before(async () => {
-    w = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: true, contextIsolation: false } });
+    w = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: true,
+        nodeIntegrationInSubFrames: true,
+        contextIsolation: false
+      }
+    });
     await w.loadURL('about:blank');
   });
   after(async () => {
@@ -62,7 +69,7 @@ describe('ipcRenderer module', () => {
     it('does not crash when sending external objects', async () => {
       await expect(w.webContents.executeJavaScript(`{
         const { ipcRenderer } = require('electron')
-        const http = require('http')
+        const http = require('node:http')
 
         const request = http.request({ port: 5000, hostname: '127.0.0.1', method: 'GET', path: '/' })
         const stream = request.agent.sockets['127.0.0.1:5000:'][0]._handle._externalStream
@@ -154,7 +161,36 @@ describe('ipcRenderer module', () => {
             ipcRenderer.sendTo(${contents.id}, 'ping', ${JSON.stringify(payload)})
             ipcRenderer.once('pong', (event, data) => resolve(data))
           })`);
-          expect(data).to.equal(payload);
+          expect(data.payload).to.equal(payload);
+          expect(data.senderIsMainFrame).to.be.true();
+        });
+
+        it('sends message to WebContents from a child frame', async () => {
+          const frameCreated = once(w.webContents, 'frame-created') as Promise<[any, Electron.FrameCreatedDetails]>;
+
+          const promise = w.webContents.executeJavaScript(`new Promise(resolve => {
+            const iframe = document.createElement('iframe');
+            iframe.src = 'data:text/html,';
+            iframe.name = 'iframe';
+            document.body.appendChild(iframe);
+
+            const { ipcRenderer } = require('electron');
+            ipcRenderer.once('pong', (event, data) => resolve(data));
+          })`);
+
+          const [, details] = await frameCreated;
+          expect(details.frame.name).to.equal('iframe');
+
+          await once(details.frame, 'dom-ready');
+
+          details.frame.executeJavaScript(`new Promise(resolve => {
+            const { ipcRenderer } = require('electron');
+            ipcRenderer.sendTo(${contents.id}, 'ping', ${JSON.stringify(payload)});
+          })`);
+
+          const data = await promise;
+          expect(data.payload).to.equal(payload);
+          expect(data.senderIsMainFrame).to.be.false();
         });
 
         it('sends message on channel with non-ASCII characters to WebContents', async () => {
