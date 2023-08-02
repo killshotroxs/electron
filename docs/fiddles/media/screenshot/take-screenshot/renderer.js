@@ -15,7 +15,7 @@ screenshot.addEventListener('click', async (event) => {
   desktopCapturer.getSources(options, (error, sources) => {
     if (error) return console.log(error)
 
-    sources.forEach((source) => {
+    for (const source of sources) {
       const sourceName = source.name.toLowerCase()
       if (sourceName === 'entire screen' || sourceName === 'screen 1') {
         const screenshotPath = path.join(os.tmpdir(), 'screenshot.png')
@@ -28,7 +28,7 @@ screenshot.addEventListener('click', async (event) => {
           screenshotMsg.textContent = message
         })
       }
-    })
+    }
   })
 })
 
