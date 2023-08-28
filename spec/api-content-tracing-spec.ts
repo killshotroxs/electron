@@ -120,12 +120,9 @@ ifdescribe(!(['arm', 'arm64', 'ia32'].includes(process.arch)))('contentTracing',
 
   describe('captured events', () => {
     it('include V8 samples from the main process', async function () {
-      // This test is flaky on macOS CI.
-      this.retries(3);
-
       await contentTracing.startRecording({
         categoryFilter: 'disabled-by-default-v8.cpu_profiler',
-        traceOptions: 'record-until-full'
+        traceOptions: 'record-as-much-as-possible'
       });
       {
         const start = Date.now();
